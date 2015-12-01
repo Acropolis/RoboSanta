@@ -1,0 +1,13 @@
+#Generated files
+.classpath
+.idea/
+.project
+.settings/
+*.iml
+target/
+
+#Secret files
+client_secret.json
+main/resources/santas.csv
+
+
