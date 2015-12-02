@@ -17,7 +17,7 @@ public class Driver {
 		List<Santa> santas = new ArrayList<>();
 		List<Santa> matches = new ArrayList<>();
 		while(scanner.hasNext()) {
-			String [] santaCSV = scanner.next().split(",");
+			String [] santaCSV = scanner.nextLine().split(",");
 			Santa santa = new Santa(santaCSV[0],santaCSV[1]);
 			for(int i = 2; i < santaCSV.length; i++) {
 				santa.addNoPair(santaCSV[i]);
@@ -44,6 +44,7 @@ public class Driver {
 		}
 		
 		for(int i = 0; i < santas.size(); i++) {
+//			System.out.println("Santa: " + santas.get(i).getName() + "\t| Matches: " + matches.get(i).getName());
 			MailMan.sendMessage(santas.get(i).getEmail(), "RoboSanta has matched you with your elf for Secret Santa",
 				"RoboSanta has matched you for the Secret Santa. You're going to get a gift for " + matches.get(i).getName());
 		}
