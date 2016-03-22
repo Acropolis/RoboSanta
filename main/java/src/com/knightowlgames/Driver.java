@@ -9,6 +9,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class Driver {
 	
@@ -19,35 +20,28 @@ public class Driver {
 
 	public static void main(String[] args) throws IOException {
 		
-		LinkedList<Santa> giverQueue = new LinkedList<>();
-		LinkedList<Santa> completedQueue = new LinkedList<>();
-		
-		Files.readAllLines(Paths.get("main/resources/santas.csv"))
-			.stream()
+		LinkedList<Santa> completedQueue = new LinkedList<>(), giverQueue = Files.readAllLines(Paths.get("main/resources/santas.csv")).stream()
 			.map(s -> new Santa(s.split(",")))
-			.forEach(giverQueue::add);
+			.collect(Collectors.toCollection(LinkedList::new));
 		
 		giverQueue.sort((s1,s2) -> s1.identifier.compareTo(s2.identifier)); // Randomize.
 		giverQueue.sort((s1,s2) -> s1.noPair.isEmpty() ? s2.noPair.isEmpty() ? 0 : 1 : -1); // Then prioritize those with noPair lists.
 		
 		while(!giverQueue.isEmpty()) {
-			Santa gifter = giverQueue.remove();
-			Santa giftee = giverQueue.remove();
+			Santa gifter = giverQueue.remove(), giftee = giverQueue.remove();
 			if(gifter.cannotPair(giftee)) {
 				giverQueue.addFirst(gifter);
 				giverQueue.add(giverQueue.size() - 2, giftee);
 			} else {
-				completedQueue.addLast(gifter);
-				completedQueue.addLast(giftee);
+				completedQueue.addAll(Arrays.asList(gifter, giftee));
 			}
 		}
 
 		for(int i = 0; i < completedQueue.size(); i++) {
-			if(isDebug)
-				System.out.println(String.format("%s gets a gift for %s", completedQueue.get(i).name, completedQueue.get((i+1)%completedQueue.size()).name));
+			if(isDebug) System.out.println(String.format("%s gets a gift for %s", completedQueue.get(i).name, completedQueue.get((i+1)%completedQueue.size()).name));
 			
 			//MailMan.sendMessage(completedQueue.get(i).email, EmailSubject,
-				//String.format(EmailBody, completedQueue.get(i+1 % completedQueue.size()).name));
+				//String.format(EmailBody, completedQueue.get((i+1) % completedQueue.size()).name));
 		}
 	}
 	
@@ -61,10 +55,7 @@ public class Driver {
 			List<String> csvElemList = Arrays.asList(csvElem);
 			name = csvElemList.get(0);
 			email = csvElemList.get(1);
-			if(csvElem.length > 2)
-				noPair = new HashSet<>(csvElemList.subList(2, csvElemList.size()));
-			else
-				noPair = new HashSet<>();
+			noPair = csvElem.length > 2 ? new HashSet<>(csvElemList.subList(2, csvElemList.size())) : new HashSet<>();
 			identifier = UUID.randomUUID().toString();
 		}
 		
