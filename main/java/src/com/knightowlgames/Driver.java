@@ -1,88 +1,79 @@
 package com.knightowlgames;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.StringJoiner;
+import java.util.Set;
+import java.util.UUID;
 
 public class Driver {
+	
+	private static final boolean isDebug = java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments().toString().contains("jdwp");
+	
+	private static final String EmailSubject = "RoboSanta has matched you with your elf for Secret Santa";
+	private static final String EmailBody = "RoboSanta has matched you for the Secret Santa. You're going to get a gift for %s";
 
-	public static void main(String[] args) throws FileNotFoundException {
+	public static void main(String[] args) throws IOException {
 		
-		Scanner scanner = new Scanner(new File("main/resources/santas.csv"));
-		List<Santa> santas = new ArrayList<>();
-		List<Santa> matches = new ArrayList<>();
-		while(scanner.hasNext()) {
-			String [] santaCSV = scanner.nextLine().split(",");
-			Santa santa = new Santa(santaCSV[0],santaCSV[1]);
-			for(int i = 2; i < santaCSV.length; i++) {
-				santa.addNoPair(santaCSV[i]);
-			}
-			santas.add(santa);
-			matches.add(santa);
-		}
-		scanner.close();
+		LinkedList<Santa> giverQueue = new LinkedList<>();
+		LinkedList<Santa> completedQueue = new LinkedList<>();
 		
-		boolean valid = false;
-		int count = 0;
-		while(!valid) {
-			System.out.println("Try " + count++);
-			valid = true;
-			long seed = System.nanoTime();
-			Collections.shuffle(matches, new Random(seed));
-			for(int i = 0; i < santas.size(); i++) {
-				if(matches.get(i).getName().contentEquals(santas.get(i).getName()) ||
-						santas.get(i).getNoPair().contains(matches.get(i).getName())) {
-					valid = false;
-					break;
-				}
+		Files.readAllLines(Paths.get("main/resources/santas.csv"))
+			.stream()
+			.map(s -> new Santa(s.split(",")))
+			.forEach(giverQueue::add);
+		
+		giverQueue.sort((s1,s2) -> s1.identifier.compareTo(s2.identifier)); // Randomize.
+		giverQueue.sort((s1,s2) -> s1.noPair.isEmpty() ? s2.noPair.isEmpty() ? 0 : 1 : -1); // Then prioritize those with noPair lists.
+		
+		while(!giverQueue.isEmpty()) {
+			Santa gifter = giverQueue.remove();
+			Santa giftee = giverQueue.remove();
+			if(gifter.cannotPair(giftee)) {
+				giverQueue.addFirst(gifter);
+				giverQueue.add(giverQueue.size() - 2, giftee);
+			} else {
+				completedQueue.addLast(gifter);
+				completedQueue.addLast(giftee);
 			}
 		}
-		
-		for(int i = 0; i < santas.size(); i++) {
-//			System.out.println("Santa: " + santas.get(i).getName() + "\t| Matches: " + matches.get(i).getName());
-			MailMan.sendMessage(santas.get(i).getEmail(), "RoboSanta has matched you with your elf for Secret Santa",
-				"RoboSanta has matched you for the Secret Santa. You're going to get a gift for " + matches.get(i).getName());
+
+		for(int i = 0; i < completedQueue.size(); i++) {
+			if(isDebug)
+				System.out.println(String.format("%s gets a gift for %s", completedQueue.get(i).name, completedQueue.get((i+1)%completedQueue.size()).name));
+			
+			//MailMan.sendMessage(completedQueue.get(i).email, EmailSubject,
+				//String.format(EmailBody, completedQueue.get(i+1 % completedQueue.size()).name));
 		}
 	}
 	
 	public static class Santa {
-		private String name;
-		private String email;
-		private List<String> noPair;
-		
-		public Santa(String name, String email) {
-			this.name = name;
-			this.email = email;
-			noPair = new ArrayList<>();
-		}
-		
-		public String getName() {
-			return name;
-		}
+		public final String name;
+		public final String email;
+		public final Set<String> noPair;
+		public String identifier;
 
-		public String getEmail() {
-			return email;
-		}
-
-		public List<String> getNoPair() {
-			return noPair;
-		}
-
-		public void addNoPair(String pair) {
-			noPair.add(pair);
+		public Santa(String[] csvElem) {
+			List<String> csvElemList = Arrays.asList(csvElem);
+			name = csvElemList.get(0);
+			email = csvElemList.get(1);
+			if(csvElem.length > 2)
+				noPair = new HashSet<>(csvElemList.subList(2, csvElemList.size()));
+			else
+				noPair = new HashSet<>();
+			identifier = UUID.randomUUID().toString();
 		}
 		
+		public boolean cannotPair(Santa other) {
+			return this.noPair.contains(other.name) || other.noPair.contains(this.name);
+		}
+
 		public String toString() {
-			StringJoiner joiner = new StringJoiner(",");
-			joiner.add("name=" + name);
-			joiner.add("email=" + email);
-			noPair.stream().forEach(s -> joiner.add("noPair=" + s));
-			return joiner.toString();
+			return String.join("|", "name="+ name, "email="+ email, "noPair=" + String.join(",", noPair));
 		}
 	}
 }
