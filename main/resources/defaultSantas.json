@@ -1,0 +1,7 @@
+[
+{"name":"Albert", "email":"albert@example.com", "list" : "http://a.co/albertList", "noMatch" : ["Edward"]},
+{"name":"Bob", "email":"bob@example.com", "list" : "http://a.co/bobList", "noMatch" : ["Albert"]},
+{"name":"Cindy", "email":"cindy@example.com", "list" : "http://a.co/cindyList", "noMatch" : ["Bob"]},
+{"name":"Derrick", "email":"derrick@example.com", "list" : "http://a.co/derrickList", "noMatch" : ["Cindy"]},
+{"name":"Edward", "email":"eddy@example.com", "noMatch" : ["Derrick"]}
+]

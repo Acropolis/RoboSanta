@@ -8,6 +8,6 @@ target/
 
 #Secret files
 client_secret.json
-main/resources/santas.csv
+main/resources/santas.json
 
 

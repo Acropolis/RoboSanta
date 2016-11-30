@@ -1,31 +1,41 @@
 package com.knightowlgames;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.Scanner;
-import java.util.StringJoiner;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Driver {
 
-	public static void main(String[] args) throws FileNotFoundException {
+	public static void main(String[] args) throws JsonParseException, JsonMappingException, IOException {
 		
-		Scanner scanner = new Scanner(new File("main/resources/santas.csv"));
-		List<Santa> santas = new ArrayList<>();
-		List<Santa> matches = new ArrayList<>();
-		while(scanner.hasNext()) {
-			String [] santaCSV = scanner.nextLine().split(",");
-			Santa santa = new Santa(santaCSV[0],santaCSV[1]);
-			for(int i = 2; i < santaCSV.length; i++) {
-				santa.addNoPair(santaCSV[i]);
-			}
-			santas.add(santa);
-			matches.add(santa);
+		String santaFile = System.getProperty("santaFile");
+		
+		ArrayList<Santa> santas = new ObjectMapper()
+				.readValue(new File((santaFile == null || santaFile.isEmpty() ? "main/resources/defaultSantas.json" : santaFile)), 
+						   new TypeReference<ArrayList<Santa>>(){});
+		
+		List<Santa> matches = shuffle(santas);
+		
+		for(int i = 0; i < santas.size(); i++) {
+			String message = santas.get(i).getName() + ",\nRoboSanta has made a match for you." +
+					" You're going to get a gift for " + matches.get(i).getName() + "!" +
+					(matches.get(i).getList() == null || matches.get(i).getList().isEmpty() ? "" : "\nHere is their Christmas List: " + matches.get(i).getList());
+			MailMan.sendMessage(santas.get(i).getEmail(), "RoboSanta has matched you with your elf for Secret Santa",
+				message);
 		}
-		scanner.close();
+	}
+	
+	private static List<Santa> shuffle(ArrayList<Santa> santas) {
+		ArrayList<Santa> matches = (ArrayList<Santa>) santas.clone();
 		
 		boolean valid = false;
 		int count = 0;
@@ -35,54 +45,64 @@ public class Driver {
 			long seed = System.nanoTime();
 			Collections.shuffle(matches, new Random(seed));
 			for(int i = 0; i < santas.size(); i++) {
-				if(matches.get(i).getName().contentEquals(santas.get(i).getName()) ||
-						santas.get(i).getNoPair().contains(matches.get(i).getName())) {
+				if(matches.get(i).getName() == santas.get(i).getName() ||
+						santas.get(i).getNoMatch().contains(matches.get(i).getName())) {
 					valid = false;
 					break;
 				}
 			}
 		}
-		
-		for(int i = 0; i < santas.size(); i++) {
-//			System.out.println("Santa: " + santas.get(i).getName() + "\t| Matches: " + matches.get(i).getName());
-			MailMan.sendMessage(santas.get(i).getEmail(), "RoboSanta has matched you with your elf for Secret Santa",
-				"RoboSanta has matched you for the Secret Santa. You're going to get a gift for " + matches.get(i).getName());
-		}
+		return matches;
 	}
 	
 	public static class Santa {
 		private String name;
 		private String email;
-		private List<String> noPair;
-		
-		public Santa(String name, String email) {
-			this.name = name;
-			this.email = email;
-			noPair = new ArrayList<>();
-		}
+		private String list;
+
+		private List<String> noMatch;
 		
 		public String getName() {
 			return name;
 		}
-
+		
+		public void setName(String name) {
+			this.name = name;
+		}
+		
 		public String getEmail() {
 			return email;
 		}
-
-		public List<String> getNoPair() {
-			return noPair;
+		
+		public void setEmail(String email) {
+			this.email = email;
 		}
-
-		public void addNoPair(String pair) {
-			noPair.add(pair);
+		
+		public String getList() {
+			return list;
+		}
+		
+		public void setList(String list) {
+			this.list = list;
+		}
+		
+		public List<String> getNoMatch() {
+			return noMatch;
+		}
+		
+		public void setNoMatch(List<String> noMatch) {
+			this.noMatch = noMatch;
 		}
 		
 		public String toString() {
-			StringJoiner joiner = new StringJoiner(",");
-			joiner.add("name=" + name);
-			joiner.add("email=" + email);
-			noPair.stream().forEach(s -> joiner.add("noPair=" + s));
-			return joiner.toString();
+			try {
+				return new ObjectMapper().writeValueAsString(this);
+			} catch (JsonProcessingException e) {
+				return "name : " + name +
+					   " email : " + email +
+					   " list : " + list +
+					   " noMatch : " + noMatch.toString();
+			}
 		}
 	}
 }

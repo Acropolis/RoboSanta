@@ -6,25 +6,37 @@
 4. Place the credentials json file in the root and call it "client_secret.json"
 5. When running the application use the commandline argument -DsourceEmail=[email] using the email tied to the credentials
 
-When you first run the application the browser will pop up asking for permissions for the application
+When you first run the application the browser will pop up asking for permissions for the application.
 
-#Setup of the CSV file
-The application requires a file called santas.csv to be present in the /main/resources/ file.
-This file is a csv file that has 2 required entries per line and one optional entry:
+#Setup of the Json File
+The application requires a json file to be present in a path defined by the System Property "santaFile" relative to the project directory. If the property isn't given the program will use the defaultSantas.json file at main/resources/defaultSantas.json
 
-1. The name of the Santa
-2. The email of the Santa
-3. An optional comma separated list of people that the santa isn't allowed to be matched with.
- * Note: if a person isn't allowed to give a gift to anyone the program will never complete. You've been warned.
+The file contains an array of Santa json objects. Example:
+```javascript
+	[
+		{
+			"name" : "Santa Claus", 
+			"email" : "santa@northpole.org",
+			"list" : "http://a.co/santasWishList",
+			"noMatch" : ["Mrs. Claus","Rudolph"]
+		}
+	]
+```
+
+See included defaultSantas.json file in main/resources/
 
 #Results of running the program
 Each Santa entry will be matched to another entry and an email will be sent to the associated Santa's email informing them of their match.
+
+The program will not match an entry with any other entry that shares a name in the former's noMatch element. 
 
 All emails will be sent from the value given as the sourceEmail and will appear in that email's Sent folder.
 
 The emails will have the title "RoboSanta has matched you with your elf for Secret Santa"
 
-The body will be "RoboSanta has matched you for the Secret Santa. You're going to get a gift for [matched santa's name]"
+The body will be "{name},\nRoboSanta has made a match for you. You're going to get a gift for {match's name}!"
+
+If the list element is present in the json a list will be added after the line "Here is their Christmas List: " otherwise the line will not appear. 
 
 #Acknowledgements
 MailMan code cribbed from Google's gmail quickstart tutorials.
